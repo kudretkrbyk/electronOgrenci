@@ -11,6 +11,11 @@ export default function Students() {
     return <div>Veri yüklenirken hata oluştu: {error.message}</div>
   }
 
+  // Verileri A-Z sırala
+  const sortedStudentsData = studentsData.sort((a, b) =>
+    a.ogr_ad_soyad.localeCompare(b.ogr_ad_soyad)
+  )
+
   return (
     <div className="p-10">
       <h1 className="text-2xl font-bold mb-5">Öğrenci Listesi</h1>
@@ -24,7 +29,7 @@ export default function Students() {
             </tr>
           </thead>
           <tbody>
-            {studentsData.map((e, index) => (
+            {sortedStudentsData.map((e, index) => (
               <tr key={index} className="odd:bg-white even:bg-gray-50">
                 <td className="border border-gray-300 px-4 py-2">{e.ogr_ad_soyad}</td>
                 <td className="border border-gray-300 px-4 py-2">{e.ogr_sinif}</td>
