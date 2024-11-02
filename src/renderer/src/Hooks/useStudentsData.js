@@ -21,7 +21,6 @@ const useStudentsData = () => {
       } else if (Array.isArray(response.data?.data)) {
         setStudentsData(response.data.data)
         setError(null)
-        console.log('else if')
       } else {
         console.log('else')
         setError('Beklenmeyen yanıt formatı.')
@@ -38,7 +37,7 @@ const useStudentsData = () => {
       window.api.off('students-response', apiResponseHandler)
     }
   }, [])
-  console.log('hooh içi öğrencielr', studentsData)
+  //console.log('hooh içi öğrencielr', studentsData)
 
   return { studentsData, error, loading }
 }

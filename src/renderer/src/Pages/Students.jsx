@@ -1,7 +1,9 @@
+import { useNavigate } from 'react-router-dom'
 import useStudentsData from '../Hooks/useStudentsData'
 
 export default function Students() {
   const { studentsData, error, loading } = useStudentsData()
+  const navigate = useNavigate() // useNavigate hook'u ile yönlendirme fonksiyonu
 
   if (loading) {
     return <div>Yükleniyor...</div>
@@ -11,7 +13,6 @@ export default function Students() {
     return <div>Veri yüklenirken hata oluştu: {error.message}</div>
   }
 
-  // Verileri A-Z sırala
   const sortedStudentsData = studentsData.sort((a, b) =>
     a.ogr_ad_soyad.localeCompare(b.ogr_ad_soyad)
   )
@@ -32,12 +33,17 @@ export default function Students() {
             {sortedStudentsData.map((e, index) => (
               <tr key={index} className="odd:bg-white even:bg-gray-50">
                 <td className="border border-gray-300 px-4 py-2">{e.ogr_ad_soyad}</td>
-                <td className="border border-gray-300 px-4 py-2">{e.ogr_sinif}</td>
+                <td className="border border-gray-300 px-4 py-2">
+                  {e.ogr_sinif} {e.ogr_sube}
+                </td>
                 <td className="border border-gray-300 px-4 py-2 flex gap-2">
                   <button className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
                     Düzenle
                   </button>
-                  <button className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">
+                  <button
+                    onClick={() => navigate(`/sonuclar/${e.id}`)} // Öğrenci id ile yönlendirme
+                    className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+                  >
                     Sonuçlara Git
                   </button>
                 </td>

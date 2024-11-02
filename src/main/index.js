@@ -17,7 +17,7 @@ function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
-    show: false,
+    show: true,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
@@ -51,7 +51,6 @@ const getOgrenciler = async () => {
     ogr_sinif: doc.data().ogr_sinif,
     ogr_sube: doc.data().ogr_sube
   }))
-  console.log('öprenciler', ogrenciler)
   return { data: ogrenciler }
 }
 
@@ -62,18 +61,14 @@ const getSinavlar = async () => {
 }
 
 const getOgrenciSinavSonuclari = async (ogrenciId = null) => {
-  console.log('getOgrenciSinavSonuclari geldi')
   let sinavSonuclariSnapshot
 
-  // Öğrenci ID'si varsa, o öğrenciye ait sonuçları al
   if (ogrenciId) {
     sinavSonuclariSnapshot = await db
       .collection('sinav_sonuclari')
       .where('ogrenci_id', '==', ogrenciId)
       .get()
-  }
-  // Öğrenci ID'si yoksa tüm sınav sonuçlarını al
-  else {
+  } else {
     sinavSonuclariSnapshot = await db.collection('sinav_sonuclari').get()
   }
 
@@ -81,28 +76,34 @@ const getOgrenciSinavSonuclari = async (ogrenciId = null) => {
     throw new Error('Sınav sonuçları bulunamadı.')
   }
 
+  // `sinav_adi` ve `ogrenci_adi` verilerini önceki yapıya dönüştürme
   const ogrenciSinavGruplari = {}
 
   for (const sinavSonucuDoc of sinavSonuclariSnapshot.docs) {
     const sinavSonucu = sinavSonucuDoc.data()
-    const sinavDoc = await db.collection('sinavlar').doc(sinavSonucu.sinav_id).get()
-    const sinavBilgisi = sinavDoc.data()
-    const ogrenciDoc = await db.collection('ogrenciler').doc(sinavSonucu.ogrenci_id).get()
-    const ogrenciBilgisi = ogrenciDoc.data()
+    const { ogrenci_id, sinav_id, sinav_adi, ogrenci_adi, sinav_net, sinav_puan, sinav_siralama } =
+      sinavSonucu
 
-    if (!ogrenciSinavGruplari[sinavSonucu.ogrenci_id]) {
-      ogrenciSinavGruplari[sinavSonucu.ogrenci_id] = { ogrenci: ogrenciBilgisi, sinavlar: [] }
+    if (!ogrenciSinavGruplari[ogrenci_id]) {
+      ogrenciSinavGruplari[ogrenci_id] = {
+        ogrenci: {
+          ogr_ad_soyad: ogrenci_adi
+        },
+        sinavlar: []
+      }
     }
 
-    ogrenciSinavGruplari[sinavSonucu.ogrenci_id].sinavlar.push({
-      sinav: sinavBilgisi,
-      sinav_puan: sinavSonucu.sinav_puan,
-      sinav_siralama: sinavSonucu.sinav_siralama,
-      sinav_net: sinavSonucu.sinav_net
+    ogrenciSinavGruplari[ogrenci_id].sinavlar.push({
+      sinav: {
+        id: sinav_id,
+        sinav_adi: sinav_adi
+      },
+      sinav_net,
+      sinav_puan,
+      sinav_siralama
     })
   }
 
-  console.log('öğrenci full sonuçlar', ogrenciSinavGruplari)
   return { data: Object.values(ogrenciSinavGruplari) }
 }
 
@@ -130,9 +131,23 @@ const postExamsResult = async (data) => {
     throw new Error('Lütfen gerekli tüm alanları doldurun.')
   }
 
+  // Öğrenci ve sınav bilgilerini çekme
+  const ogrenciDoc = await db.collection('ogrenciler').doc(ogrenci_id).get()
+  const sinavDoc = await db.collection('sinavlar').doc(sinav_id).get()
+
+  if (!ogrenciDoc.exists || !sinavDoc.exists) {
+    throw new Error('Geçersiz öğrenci veya sınav ID.')
+  }
+
+  const ogrenciAdi = ogrenciDoc.data().ogr_ad_soyad
+  const sinavAdi = sinavDoc.data().sinav_adi
+
+  // Sınav sonucu ekleme
   const resultRef = await db.collection('sinav_sonuclari').add({
     ogrenci_id,
     sinav_id,
+    ogrenci_adi: ogrenciAdi, // Öğrenci adı ekleniyor
+    sinav_adi: sinavAdi, // Sınav adı ekleniyor
     sinav_net,
     sinav_puan,
     sinav_siralama
@@ -142,15 +157,15 @@ const postExamsResult = async (data) => {
 }
 
 const postStudents = async (data) => {
-  const { ogr_ad_soyad, ogr_sinif, ogr_sube } = data
+  const { ogr_ad_soyad, ogr_sube } = data // ogr_sinif artık frontend'den gelmiyor
 
-  if (!ogr_ad_soyad || !ogr_sinif || !ogr_sube) {
+  if (!ogr_ad_soyad) {
     throw new Error('Lütfen gerekli tüm alanları doldurun.')
   }
 
   const studentRef = await db.collection('ogrenciler').add({
     ogr_ad_soyad,
-    ogr_sinif,
+    ogr_sinif: '8', // ogr_sinif sabit olarak 8 ayarlandı
     ogr_sube
   })
 
@@ -159,7 +174,6 @@ const postStudents = async (data) => {
 
 // IPC ile API çağrıları
 ipcMain.on('fetch-students', async (event) => {
-  console.log('fetch-students geldi')
   try {
     const studentsResponse = await getOgrenciler()
     event.reply('students-response', { data: studentsResponse })
@@ -185,24 +199,20 @@ ipcMain.on('fetch-exams', async (event) => {
     event.reply('exams-response', { error: error.message })
   }
 })
+
 // API'de tüm sınav sonuçlarını almayı dinle
 ipcMain.on('fetch-all-exam-results', async (event) => {
-  console.log('fetch-all-exam-results geldi')
   try {
-    const responseData = await getOgrenciSinavSonuclari(null) // Öğrenci ID'siz tüm sonuçlar
+    const responseData = await getOgrenciSinavSonuclari(null)
     event.reply('all-exam-results-response', { data: responseData })
   } catch (error) {
     event.reply('all-exam-results-response', { error: error.message })
   }
 })
 
+// POST isteklerini dinleme
 ipcMain.on('post-exam', async (event, { data }) => {
-  console.log('Gelen sınav verisi:', data) // Gelen veriyi konsolda kontrol edelim
   try {
-    if (!data || !data.sinav_adi || !data.sinav_tarihi || !data.sinava_giren_sayisi) {
-      throw new Error('Lütfen gerekli tüm alanları doldurun.')
-    }
-
     const postExamResponse = await postExams(data)
     event.reply('post-exam-response', { data: postExamResponse })
   } catch (error) {

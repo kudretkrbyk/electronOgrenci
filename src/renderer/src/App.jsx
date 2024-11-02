@@ -12,16 +12,15 @@ function App() {
   return (
     <div>
       <Router>
-        <HomeNavbar></HomeNavbar>
+        <HomeNavbar />
         <Routes>
-          <Route path="*" element={<Home></Home>}></Route>
-          <Route path="/Ogrenciler" element={<Students></Students>}></Route>
-          <Route path="/Sinavlar" element={<Exams></Exams>}></Route>
-          <Route path="/Sonuclar" element={<Sonuclar></Sonuclar>}></Route>
-          <Route path="/Rapor" element={<Report></Report>}>
-            {' '}
-          </Route>
-          <Route path="/Admin" element={<Admin></Admin>}></Route>
+          <Route path="*" element={<Home />} />
+          <Route path="/Ogrenciler" element={<Students />} />
+          <Route path="/Sinavlar" element={<Exams />} />
+          <Route path="/Sonuclar" element={<Sonuclar />} /> {/* Genel erişim */}
+          <Route path="/Sonuclar/:id" element={<Sonuclar />} /> {/* Belirli öğrenci ile erişim */}
+          <Route path="/Rapor" element={<Report />} />
+          <Route path="/Admin" element={<Admin />} />
         </Routes>
       </Router>
     </div>

@@ -59,21 +59,20 @@ export default function AdminStudentInput() {
           <label>Sınıf:</label>
           <input
             type="text"
-            value={ogrSinif}
-            onChange={(e) => setOgrSinif(e.target.value)}
-            className="border p-2 rounded w-full"
-            required
+            value="8"
+            readOnly
+            className="border p-2 rounded w-full bg-gray-100 cursor-not-allowed"
           />
         </div>
 
         <div>
           <label>Şube:</label>
           <input
+            placeholder="Boş kalabilir"
             type="text"
             value={ogrSube}
             onChange={(e) => setOgrSube(e.target.value)}
             className="border p-2 rounded w-full"
-            required
           />
         </div>
 

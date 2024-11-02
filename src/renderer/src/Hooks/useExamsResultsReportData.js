@@ -41,8 +41,8 @@ const useExamsResultsReportData = () => {
 
     getResults() // Sonuçları almak için fonksiyonu çağır
   }, []) // Boş bağımlılık dizisi ile yalnızca bileşen ilk yüklendiğinde çalışır
+  console.log('sınav sonuçları hook içi', examResults)
 
-  console.log('hook içi sınav sonuçları:', examResults)
   return { examResults, error, loading }
 }
 

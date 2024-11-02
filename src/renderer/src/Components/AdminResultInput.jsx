@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import usePostExamResult from '../Hooks/usePostExamResult' // Hook'u buraya import ediyoruz.
+import usePostExamResult from '../Hooks/usePostExamResult'
+import useExamsResultsReportData from '../Hooks/useExamsResultsReportData'
 
 export default function AdminResultInput({
   examsData,
@@ -8,17 +9,25 @@ export default function AdminResultInput({
   studentsLoading
 }) {
   const { postExamResult, loading, error, success } = usePostExamResult()
+  const { examResults, error: examError, loading: examLoading } = useExamsResultsReportData()
   const [selectedStudent, setSelectedStudent] = useState('')
   const [selectedExam, setSelectedExam] = useState('')
   const [netSayisi, setNetSayisi] = useState('')
   const [puan, setPuan] = useState('')
   const [siralamasi, setSiralamasi] = useState('')
   const [isReady, setIsReady] = useState(false)
+  const [filteredStudents, setFilteredStudents] = useState([])
+
+  // Verileri A-Z sırala
+  const sortedStudentsData = studentsData.sort((a, b) =>
+    a.ogr_ad_soyad.localeCompare(b.ogr_ad_soyad)
+  )
 
   useEffect(() => {
     if (
       !studentsLoading &&
       !examsLoading &&
+      !examLoading &&
       Array.isArray(studentsData) &&
       Array.isArray(examsData)
     ) {
@@ -26,7 +35,32 @@ export default function AdminResultInput({
     } else {
       setIsReady(false)
     }
-  }, [studentsLoading, examsLoading, studentsData, examsData])
+  }, [studentsLoading, examsLoading, examLoading, studentsData, examsData])
+
+  // Seçilen sınav için sonuç girilmemiş öğrencileri filtrele
+  useEffect(() => {
+    if (selectedExam && examResults && Array.isArray(studentsData)) {
+      const studentsWithoutResult = sortedStudentsData.filter((student) => {
+        // Bu öğrenci için seçilen sınavın sonuçlarının olup olmadığını kontrol edin
+        const studentResult = examResults.find(
+          (result) => result.ogrenci && result.ogrenci.ogr_ad_soyad === student.ogr_ad_soyad
+        )
+
+        // Eğer öğrenci sonuçlarda varsa, seçilen sınav id'siyle eşleşmeyenleri filtrele
+        if (studentResult && studentResult.sinavlar) {
+          return !studentResult.sinavlar.some(
+            (sinav) => sinav.sinav && sinav.sinav.id === selectedExam
+          )
+        }
+
+        // Öğrenci sonuçlarda yoksa, tüm sınavlar için henüz sonuç girişi yapılmamış kabul edin
+        return true
+      })
+      setFilteredStudents(studentsWithoutResult)
+    } else {
+      setFilteredStudents(sortedStudentsData)
+    }
+  }, [selectedExam, sortedStudentsData, examResults])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -42,7 +76,7 @@ export default function AdminResultInput({
     await postExamResult(resultData)
 
     setSelectedStudent('')
-    setSelectedExam('')
+
     setNetSayisi('')
     setPuan('')
     setSiralamasi('')
@@ -66,12 +100,11 @@ export default function AdminResultInput({
               required
             >
               <option value="">Bir öğrenci seçin</option>
-              {Array.isArray(studentsData) &&
-                studentsData.map((student) => (
-                  <option key={student.id} value={student.id}>
-                    {student.ogr_ad_soyad}
-                  </option>
-                ))}
+              {filteredStudents.map((student) => (
+                <option key={student.id} value={student.id}>
+                  {student.ogr_ad_soyad}
+                </option>
+              ))}
             </select>
           </div>
           <div>

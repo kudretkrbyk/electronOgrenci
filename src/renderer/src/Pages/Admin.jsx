@@ -8,7 +8,7 @@ export default function Admin() {
   const { examsData, loading: examsLoading } = useExamsData()
   const { studentsData, loading: studentsLoading } = useStudentsData()
   const [activeComponent, setActiveComponent] = useState('student')
-  console.log('admin sayfası sınavlar ve öğrenciler', examsData, studentsData)
+  //console.log('admin sayfası sınavlar ve öğrenciler', examsData, studentsData)
   return (
     <div className="flex flex-col">
       {/* Header Butonları */}
