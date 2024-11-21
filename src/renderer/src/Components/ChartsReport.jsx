@@ -6,6 +6,15 @@ import html2canvas from 'html2canvas'
 const ChartsReport = () => {
   const { examResults, loading, error } = useExamsResultsReportData()
 
+  // ExamResults verisini alfabetik sıraya göre düzenle
+  const sortedExamResults = examResults
+    ? [...examResults].sort((a, b) => {
+        const nameA = a.ogrenci?.ogr_ad_soyad?.toLowerCase() || ''
+        const nameB = b.ogrenci?.ogr_ad_soyad?.toLowerCase() || ''
+        return nameA.localeCompare(nameB)
+      })
+    : []
+
   const generatePDF = () => {
     const pdf = new jsPDF()
     const input = document.getElementById('pdf-content')
@@ -57,7 +66,7 @@ const ChartsReport = () => {
         PDF Oluştur
       </button>
       <div id="pdf-content">
-        {examResults.map((ogrenciObjesi, index) => {
+        {sortedExamResults.map((ogrenciObjesi, index) => {
           const ogrenciAdi = ogrenciObjesi.ogrenci?.ogr_ad_soyad || 'Bilinmeyen Öğrenci'
           const sinavlar = ogrenciObjesi.sinavlar || []
 
