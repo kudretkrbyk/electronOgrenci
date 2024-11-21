@@ -134,6 +134,7 @@ export default function AdminResultInput({
             onChange={(e) => setNetSayisi(e.target.value)}
             className="border p-2 rounded w-full"
             required
+            min="0"
           />
         </div>
 
@@ -145,6 +146,7 @@ export default function AdminResultInput({
             onChange={(e) => setPuan(e.target.value)}
             className="border p-2 rounded w-full"
             required
+            min="0"
           />
         </div>
 
@@ -156,6 +158,7 @@ export default function AdminResultInput({
             onChange={(e) => setSiralamasi(e.target.value)}
             className="border p-2 rounded w-full"
             required
+            min="0"
           />
         </div>
 
@@ -167,7 +170,7 @@ export default function AdminResultInput({
           {loading ? 'Kaydediliyor...' : 'Sınavı Kaydet'}
         </button>
 
-        {error && <div className="text-red-500 mt-2">{error}</div>}
+        {error && <div className="text-red-500 mt-2">{error} ghgh</div>}
         {success && <div className="text-green-500 mt-2">{success}</div>}
       </form>
     </div>

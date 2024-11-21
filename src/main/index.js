@@ -127,8 +127,14 @@ const postExams = async (data) => {
 const postExamsResult = async (data) => {
   const { ogrenci_id, sinav_id, sinav_net, sinav_puan, sinav_siralama } = data
 
-  if (!ogrenci_id || !sinav_id || !sinav_net || !sinav_puan || !sinav_siralama) {
-    throw new Error('Lütfen gerekli tüm alanları doldurun.')
+  if (data.sinav_net === undefined || data.sinav_net === null) {
+    throw new Error('Sinav net değeri geçerli bir sayı olmalıdır')
+  }
+  if (data.sinav_puan === undefined || data.sinav_puan === null) {
+    throw new Error('Sinav puan değeri geçerli bir sayı olmalıdır')
+  }
+  if (data.sinav_siralama === undefined || data.sinav_siralama === null) {
+    throw new Error('Sinav sıralama değeri geçerli bir sayı olmalıdır')
   }
 
   // Öğrenci ve sınav bilgilerini çekme
