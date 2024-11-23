@@ -1,12 +1,13 @@
-import ReactApexChart from 'react-apexcharts'
+import React, { useRef } from 'react'
 import useExamsResultsReportData from '../Hooks/useExamsResultsReportData'
 import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
+import ChartsReportPdfContent from './ChartsReportPdfContent'
 
 const ChartsReport = () => {
   const { examResults, loading, error } = useExamsResultsReportData()
+  const chartRefs = useRef([]) // Grafikleri takip etmek için bir ref dizisi
 
-  // ExamResults verisini alfabetik sıraya göre düzenle
+  // Öğrencileri alfabetik sıraya göre sıralama
   const sortedExamResults = examResults
     ? [...examResults].sort((a, b) => {
         const nameA = a.ogrenci?.ogr_ad_soyad?.toLowerCase() || ''
@@ -15,39 +16,64 @@ const ChartsReport = () => {
       })
     : []
 
-  const generatePDF = () => {
-    const pdf = new jsPDF()
-    const input = document.getElementById('pdf-content')
-    const charts = input.getElementsByTagName('canvas') // Tüm grafikleri alır
+  // Sınav adlarını sıralama
+  const sortedExamResultsWithSortedExams = sortedExamResults.map((studentResult) => {
+    const sortedSinavlar = studentResult.sinavlar
+      ? [...studentResult.sinavlar].sort((a, b) => {
+          const examNameA = a.sinav?.sinav_adi?.toLowerCase() || ''
+          const examNameB = b.sinav?.sinav_adi?.toLowerCase() || ''
+          return examNameA.localeCompare(examNameB)
+        })
+      : []
+    return { ...studentResult, sinavlar: sortedSinavlar }
+  })
 
-    let currentPageHeight = 0
-    const pageHeight = 295 // A4 boyutunda bir PDF sayfası
+  const generatePDF = async () => {
+    const pdf = new jsPDF('p', 'mm', 'a4') // A4 boyutunda PDF oluşturma
+    const pageWidth = pdf.internal.pageSize.width - 20 // Sol ve sağ kenar boşluklarını çıkar
+    const pageHeight = pdf.internal.pageSize.height - 20 // Üst ve alt kenar boşluklarını çıkar
     const margin = 10 // Kenar boşluğu
+    const chartHeight = 60 // Her bir grafik için sabit yükseklik
+    const chartSpacing = 10 // Grafikler arası boşluk
 
-    const addImageToPDF = (imgData, imgHeight) => {
-      if (currentPageHeight + imgHeight > pageHeight) {
-        // Eğer görsel sayfaya sığmıyorsa yeni bir sayfa aç
-        pdf.addPage()
-        currentPageHeight = 0
+    for (let i = 0; i < chartRefs.current.length; i++) {
+      const chartGroup = chartRefs.current[i]
+      if (!chartGroup) continue
+
+      // Yeni bir sayfa başlat
+      if (i > 0) pdf.addPage()
+
+      // Öğrenci adını PDF'ye ekle
+      pdf.setFontSize(14)
+      pdf.text(
+        `${sortedExamResultsWithSortedExams[i]?.ogrenci?.ogr_ad_soyad || `Öğrenci ${i + 1}`}`,
+        margin,
+        margin
+      )
+
+      let currentY = margin + 10 // Başlık sonrası boşluk
+
+      for (let chartType of ['net', 'puan', 'siralama']) {
+        const chart = chartGroup[chartType]
+        if (chart) {
+          try {
+            const { imgURI } = await chart.chart.dataURI({ scale: 1 })
+            const imgWidth = pageWidth // Sayfa genişliğini tamamen kapla
+            const imgHeight = chartHeight // Sabit yükseklik ayarla
+
+            // Görseli PDF'ye ekle
+            pdf.addImage(imgURI, 'PNG', margin, currentY, imgWidth, imgHeight)
+            currentY += imgHeight + chartSpacing // Sonraki grafik için boşluk bırak
+          } catch (error) {
+            console.error(`Error processing chart ${chartType} for student ${i}:`, error)
+          }
+        } else {
+          console.warn(`Chart type ${chartType} not found for student ${i}`)
+        }
       }
-      pdf.addImage(imgData, 'PNG', margin, currentPageHeight + margin, 180, imgHeight)
-      currentPageHeight += imgHeight + margin
     }
 
-    html2canvas(input, { scale: 2 }).then((canvas) => {
-      const imgData = canvas.toDataURL('image/png')
-      const imgHeight = (canvas.height * 180) / canvas.width
-      addImageToPDF(imgData, imgHeight)
-
-      for (let i = 0; i < charts.length; i++) {
-        const chartCanvas = charts[i]
-        const chartImgData = chartCanvas.toDataURL('image/png')
-        const chartImgHeight = (chartCanvas.height * 180) / chartCanvas.width
-        addImageToPDF(chartImgData, chartImgHeight)
-      }
-
-      pdf.save('charts_report.pdf')
-    })
+    pdf.save('charts_report.pdf')
   }
 
   if (loading) {
@@ -66,176 +92,10 @@ const ChartsReport = () => {
         PDF Oluştur
       </button>
       <div id="pdf-content">
-        {sortedExamResults.map((ogrenciObjesi, index) => {
-          const ogrenciAdi = ogrenciObjesi.ogrenci?.ogr_ad_soyad || 'Bilinmeyen Öğrenci'
-          const sinavlar = ogrenciObjesi.sinavlar || []
-
-          const sinavAdlari = sinavlar.map(
-            (sinavObjesi) => sinavObjesi?.sinav?.sinav_adi || 'Bilinmeyen Sınav'
-          )
-          const netler = sinavlar.map((sinavObjesi) => sinavObjesi?.sinav_net ?? 0)
-          const puanlar = sinavlar.map((sinavObjesi) => sinavObjesi?.sinav_puan ?? 0)
-          const siralamalar = sinavlar.map((sinavObjesi) => sinavObjesi?.sinav_siralama ?? 0)
-
-          const netBaslik = `${ogrenciAdi} netleri`
-          const puanBaslik = `${ogrenciAdi} puanları`
-          const siralamaBaslik = `${ogrenciAdi} sıralamaları`
-
-          const netOptions = {
-            chart: {
-              zoom: { enabled: false },
-              height: 350,
-              type: 'line',
-              toolbar: {
-                show: false
-              }
-            },
-            xaxis: {
-              categories: sinavAdlari
-            },
-            yaxis: {
-              title: {
-                text: 'Netler'
-              },
-              min: 0,
-              max: 100,
-              tickAmount: 5
-            },
-            dataLabels: {
-              enabled: true
-            },
-            title: {
-              text: netBaslik,
-              align: 'left'
-            },
-            grid: {
-              borderColor: '#e7e7e7',
-              row: {
-                colors: ['#f3f3f3', 'transparent'],
-                opacity: 0.5
-              }
-            },
-            markers: {
-              size: 5
-            }
-          }
-
-          const puanOptions = {
-            chart: {
-              zoom: { enabled: false },
-              height: 350,
-              type: 'line',
-              toolbar: {
-                show: false
-              }
-            },
-            xaxis: {
-              categories: sinavAdlari,
-              title: {
-                text: 'Sınavlar'
-              }
-            },
-            yaxis: {
-              title: {
-                text: 'Puanlar'
-              },
-              min: 0,
-              max: 500,
-              tickAmount: 10
-            },
-            dataLabels: {
-              enabled: true
-            },
-            title: {
-              text: puanBaslik,
-              align: 'left'
-            },
-            grid: {
-              borderColor: '#e7e7e7',
-              row: {
-                colors: ['#f3f3f3', 'transparent'],
-                opacity: 0.5
-              }
-            }
-          }
-
-          const siralamaOptions = {
-            chart: {
-              zoom: { enabled: false },
-              height: 350,
-              type: 'line',
-              toolbar: {
-                show: false
-              }
-            },
-            xaxis: {
-              categories: sinavAdlari,
-              title: {
-                text: 'Sınavlar'
-              }
-            },
-            yaxis: {
-              title: {
-                text: 'Sıralamalar'
-              },
-              min: 0,
-              max: Math.max(...siralamalar),
-              tickAmount: 5
-            },
-            dataLabels: {
-              enabled: true
-            },
-            title: {
-              text: siralamaBaslik,
-              align: 'left'
-            },
-            grid: {
-              borderColor: '#e7e7e7',
-              row: {
-                colors: ['#f3f3f3', 'transparent'],
-                opacity: 0.5
-              }
-            }
-          }
-
-          return (
-            <div key={index} className="p-10">
-              <h2 className="w-full bg-gray-200 p-2 font-bold text-2xl">
-                {ogrenciAdi} Sınav Sonuçları
-              </h2>
-
-              {/* Netler Grafiği */}
-              <div id={`net-chart-${index}`}>
-                <ReactApexChart
-                  options={netOptions}
-                  series={[{ name: 'Netler', data: netler }]}
-                  type="line"
-                  height={200}
-                ></ReactApexChart>
-              </div>
-
-              {/* Puanlar Grafiği */}
-              <div id={`puan-chart-${index}`}>
-                <ReactApexChart
-                  options={puanOptions}
-                  series={[{ name: 'Puanlar', data: puanlar }]}
-                  type="line"
-                  height={300}
-                ></ReactApexChart>
-              </div>
-
-              {/* Sıralamalar Grafiği */}
-              <div id={`siralama-chart-${index}`}>
-                <ReactApexChart
-                  options={siralamaOptions}
-                  series={[{ name: 'Sıralamalar', data: siralamalar }]}
-                  type="line"
-                  height={300}
-                ></ReactApexChart>
-              </div>
-            </div>
-          )
-        })}
+        <ChartsReportPdfContent
+          sortedExamResults={sortedExamResultsWithSortedExams}
+          chartRefs={chartRefs}
+        />
       </div>
     </div>
   )

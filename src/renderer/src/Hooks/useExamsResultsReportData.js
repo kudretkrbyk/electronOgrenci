@@ -15,7 +15,7 @@ const useExamsResultsReportData = () => {
 
       // Yanıt işleme fonksiyonunu tanımlıyoruz
       const apiResponseHandler = (response) => {
-        console.log('Tüm Sınav Sonuçları API Yanıtı:', response) // Daha genel bir kontrol ekledim
+        //console.log('Tüm Sınav Sonuçları API Yanıtı:', response) // Daha genel bir kontrol ekledim
 
         if (response.error) {
           setError(response.error)
@@ -41,7 +41,7 @@ const useExamsResultsReportData = () => {
 
     getResults() // Sonuçları almak için fonksiyonu çağır
   }, []) // Boş bağımlılık dizisi ile yalnızca bileşen ilk yüklendiğinde çalışır
-  console.log('sınav sonuçları hook içi', examResults)
+  //console.log('sınav sonuçları hook içi', examResults)
 
   return { examResults, error, loading }
 }

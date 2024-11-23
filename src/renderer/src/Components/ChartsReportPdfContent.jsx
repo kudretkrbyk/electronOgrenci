@@ -8,9 +8,16 @@ export default function ChartsReportPdfContent({ sortedExamResults, chartRefs })
         const ogrenciAdi = ogrenciObjesi.ogrenci?.ogr_ad_soyad || 'Bilinmeyen Öğrenci'
         const sinavlar = ogrenciObjesi.sinavlar || []
 
-        const sinavAdlari = sinavlar.map(
-          (sinavObjesi) => sinavObjesi?.sinav?.sinav_adi || 'Bilinmeyen Sınav'
-        )
+        // İlk 2 kelime ya da ilk 8 karakter
+        const sinavAdlari = sinavlar.map((sinavObjesi) => {
+          const sinavAdi = sinavObjesi?.sinav?.sinav_adi || 'Bilinmeyen Sınav'
+          // İlk 2 kelime
+          const firstTwoWords = sinavAdi.split(' ').slice(0, 2).join(' ')
+          // İlk 8 karakter (ihtiyaca göre kullanabilirsiniz)
+          const firstEightChars = sinavAdi.substring(0, 8)
+          return firstTwoWords // Ya da `firstEightChars`
+        })
+
         const netler = sinavlar.map((sinavObjesi) => sinavObjesi?.sinav_net ?? 0)
         const puanlar = sinavlar.map((sinavObjesi) => sinavObjesi?.sinav_puan ?? 0)
         const siralamalar = sinavlar.map((sinavObjesi) => sinavObjesi?.sinav_siralama ?? 0)
@@ -37,7 +44,7 @@ export default function ChartsReportPdfContent({ sortedExamResults, chartRefs })
           yaxis: {
             min: 0,
             max: 100,
-            tickAmount: 20 // 5'er artış için toplam 20 aralık
+            tickAmount: 5 // 5'er artış için toplam 20 aralık
           }
         }
 
@@ -48,7 +55,7 @@ export default function ChartsReportPdfContent({ sortedExamResults, chartRefs })
           yaxis: {
             min: 0,
             max: 500,
-            tickAmount: 50 // 10'ar artış için toplam 50 aralık
+            tickAmount: 10 // 10'ar artış için toplam 50 aralık
           }
         }
 
